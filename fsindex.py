@@ -189,12 +189,24 @@ def displayMenu():
 		displaySearch()
 
 def title(title):
+	"""
+	Sets console window title
+	"""
 	ctypes.windll.kernel32.SetConsoleTitleA(title)
 
 if __name__ == "__main__":
 	if len(sys.argv) == 1:
+		# Display UI if no command line arguments are provided
 		displayMenu()
 	else:
-		if sys.argv[1] == "search":
+		if sys.argv[1] == "-s" or sys.argv[1] == "--search":
 			loadIndex()
 			doSearch(sys.argv[2])
+		else:
+			print "Usage: python.exe fsindex.py [-s <query>]"
+			print ""
+			print "Options:"
+			print "    -h, --help         Displays this help page"
+			print "    -s, --search query Searches the index for a file path matching query. Regex"
+			print "                       can be used by adding leading and trailing slashes"
+			print ""
