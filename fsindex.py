@@ -95,7 +95,7 @@ def indexFile(path):
 		size = os.path.getsize(path)
 		modified = os.path.getmtime(path)
 		
-		if path in index and index[path][0] == size and index[path][2] == modified:
+		if path in index and index[path][0] == size and 2 in index[path] and index[path][2] == modified:
 			# File is the same, don't hash
 			f.close()
 			return
