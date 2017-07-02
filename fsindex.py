@@ -55,6 +55,7 @@ def startIndexing(root):
 			
 			# Saves the index every 1000 items
 			if n % 1000 == 0:
+				title("Saving...")
 				idxf = open("index.pickle", "wb")
 				pickle.dump(index, idxf)
 				idxf.close()
@@ -163,7 +164,8 @@ def doSearch(query):
 			rx = re.compile(query[1:-1])
 			for key in index:
 				n += 1
-				title("Searching: {0}/{1} ({2}%), found {3} items".format(n, total, n*100/total, found))
+				if n % 500 == 0:
+					title("Searching: {0}/{1} ({2}%), found {3} items".format(n, total, n*100/total, found))
 				if rx.match(key):
 					found += 1
 					displayItem(key)
@@ -173,7 +175,8 @@ def doSearch(query):
 			query = query.lower()
 			for key in index:
 				n += 1
-				title("Searching: {0}/{1} ({2}%), found {3} items".format(n, total, n*100/total, found))
+				if n % 500 == 0:
+					title("Searching: {0}/{1} ({2}%), found {3} items".format(n, total, n*100/total, found))
 				if query in key.lower():
 					found += 1
 					displayItem(key)
@@ -182,7 +185,8 @@ def doSearch(query):
 		print "Searching by MD5: {0}\n\n".format(query)
 		for key in index:
 			n += 1
-			title("Searching: {0}/{1} ({2}%), found {3} items".format(n, total, n*100/total, found))
+			if n % 500 == 0:
+				title("Searching: {0}/{1} ({2}%), found {3} items".format(n, total, n*100/total, found))
 			if index[key][1] == bin:
 				found += 1
 				displayItem(key)
