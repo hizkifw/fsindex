@@ -1,6 +1,7 @@
 """
 FSIndex
 Indexes the filesystem for quick searching
+Currently only works on Windows and Python 2.7
 (c) 2017 Hizkia Felix
 """
 
@@ -14,12 +15,18 @@ def startIndexing(root):
 	Indexes all files within `root`
 	"""
 	global index
+	
+	# Normalize file path
+	root = re.sub(r"\\+", r"\\", root + "\\")
 	print "Starting index from " + root
+	
+	loadIndex()
 	
 	stack = deque(os.listdir(root))
 	n = 0
 	last10 = time.time()
 	itempersec = 0
+	tIdxStart = time.time()
 	while len(stack) > 0:
 		# Get next target from stack
 		now = stack.pop()
@@ -59,7 +66,8 @@ def startIndexing(root):
 					pickle.dump(index, idxf)
 					idxf.close()
 	
-	print "Finished indexing"
+	tIdxEnd = time.time()
+	print "Finished indexing in {0}".format(sec2time(tIdxEnd - tIdxStart))
 
 def loadIndex():
 	"""
@@ -67,10 +75,14 @@ def loadIndex():
 	"""
 	global index
 	print "Loading index"
-	a = open("index.pickle", "rb")
-	index = pickle.load(a)
-	a.close()
-	print "{0} entries loaded".format(len(index))
+	try:
+		a = open("index.pickle", "rb")
+		index = pickle.load(a)
+		a.close()
+		print "{0} entries loaded".format(len(index))
+	except:
+		index = {}
+		print "No index file found, creating empty"
 
 def indexFile(path):
 	"""
@@ -81,10 +93,17 @@ def indexFile(path):
 		f = open(path, "rb")
 		
 		size = os.path.getsize(path)
+		modified = os.path.getmtime(path)
+		
+		if path in index and index[path][0] == size and index[path][2] == modified:
+			# File is the same, don't hash
+			f.close()
+			return
+		
 		hash = makeHashes(f)
 		
 		# TODO: Index media metadata
-		index[path] = (size, hash)
+		index[path] = (size, hash, modified)
 		f.close()
 	except:
 		return
@@ -95,9 +114,9 @@ def makeHashes(f):
 	"""
 	
 	# Get file size from file object
-	f.seek(0, 2) # move to end of file
+	f.seek(0, 2)  # move to end of file
 	sz = f.tell() # get size
-	f.seek(0) # move back to beginning
+	f.seek(0)     # move back to beginning
 	
 	# Calculates the MD5 checksum
 	hash_md5 = hashlib.md5()
@@ -169,20 +188,20 @@ def doSearch(query):
 				displayItem(key)
 	
 	tEnd = time.time()
-	print "\nFinished searching, found {0} items in {1} seconds\n".format(found, tEnd - tStart)
+	print "\nFinished searching, found {0} items in {1}\n".format(found, sec2time(tEnd - tStart))
 
 def displayMenu():
 	global index
 	title("FSIndex")
 	print "FSIndex"
 	print ""
-	print "[ ! ] Start indexing (replaces old index)"
+	print "[ i ] Start indexing"
 	print "[ s ] Search"
 	print "[ x ] Exit"
 	print ""
 	choice = raw_input("> ")
 	
-	if choice == "!":
+	if choice == "i":
 		print "Root directory?"
 		startIndexing(raw_input("> "))
 	elif choice == "s":
@@ -193,6 +212,15 @@ def title(title):
 	Sets console window title
 	"""
 	ctypes.windll.kernel32.SetConsoleTitleA(title)
+
+def sec2time(secs):
+	"""
+	Converts seconds to hours, minutes, and seconds
+	"""
+	s = secs % 60
+	m = int(secs // 60)
+	h = int(secs // 3600)
+	return "{0:02d}h {1:02d}m {2:.2f}s".format(h, m, s)
 
 if __name__ == "__main__":
 	if len(sys.argv) == 1:
