@@ -9,12 +9,13 @@ import os, sys, hashlib, pickle, json, ctypes, re, base64, time, threading
 from collections import deque
 
 index = {}
+mem = ""
 
 def startIndexing(root):
 	"""
 	Indexes all files within `root`
 	"""
-	global index
+	global index, mem
 	
 	# Normalize file path
 	root = re.sub(r"\\+", r"\\", root + "\\")
@@ -24,7 +25,6 @@ def startIndexing(root):
 	
 	stack = deque(os.listdir(root))
 	n = 0
-	mem = getMem()
 	last10 = time.time()
 	itempersec = 0
 	tIdxStart = time.time()
@@ -36,7 +36,7 @@ def startIndexing(root):
 		
 		# Show some status messages
 		print "[{0} scanned, {1} left] {2}".format(n, len(stack), root + now)
-		title("Indexing... {0} scanned, {1} left, at {2} files/sec. Mem: {3}MB".format(n, len(stack), int(itempersec), mem))
+		title("Indexing... {0} scanned, {1} left, at {2} files/sec. Mem: {3}".format(n, len(stack), int(itempersec), mem))
 
 		
 		if os.path.isfile(root + now):
@@ -58,7 +58,8 @@ def startIndexing(root):
 			
 			if n % 100 == 0:
 				# Get memory usage every 100 items
-				mem = getMem()
+				infoThread = threading.Thread(target=getMem)
+				infoThread.start()
 			
 				if n % 5000 == 0 and not saveThread.isAlive():
 					# Saves the index every 5000 items
@@ -270,6 +271,7 @@ def getMem():
 	"""
 	Gets memory usage using tasklist
 	"""
+	global mem
 	pid = os.getpid()
 	exe = 'tasklist /fi "pid eq {0}" /fo csv /nh'.format(pid)
 	csv = os.popen(exe).read()
