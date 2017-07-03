@@ -5,7 +5,7 @@ Currently only works on Windows and Python 2.7
 (c) 2017 Hizkia Felix
 """
 
-import os, sys, hashlib, pickle, json, ctypes, re, base64, time, thread
+import os, sys, hashlib, pickle, json, ctypes, re, base64, time, threading
 from collections import deque
 
 index = {}
@@ -27,6 +27,7 @@ def startIndexing(root):
 	last10 = time.time()
 	itempersec = 0
 	tIdxStart = time.time()
+	saveThread = threading.Thread(target=dumpIndexToFile)
 	while len(stack) > 0:
 		# Get next target from stack
 		now = stack.pop()
@@ -54,20 +55,17 @@ def startIndexing(root):
 			itempersec = 10 / timeto10
 			
 			# Saves the index every 5000 items
-			if n % 5000 == 0:
-				try:
-					thread.start_new_thread(dumpIndexToFile)
-				except:
-					dumpIndexToFile()
+			if n % 5000 == 0 and not saveThread.isAlive():
+				saveThread.start()
 	
-	# Save at the end of indexing
-	try:
-		thread.start_new_thread(dumpIndexToFile)
-	except:
-		dumpIndexToFile()
 	tIdxEnd = time.time()
 	tIdx = tIdxEnd - tIdxStart
 	print "Finished indexing in {0} ({1:.2f} files/sec avg.)".format(sec2time(tIdx), n / tIdx)
+	
+	# Blocking save at the end of indexing
+	print "Saving..."
+	dumpIndexToFile()
+	print "Index file saved!"
 
 def dumpIndexToFile():
 	"""
