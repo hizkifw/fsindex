@@ -5,7 +5,7 @@ Currently only works on Windows and Python 2.7
 (c) 2017 Hizkia Felix
 """
 
-import os, sys, hashlib, pickle, json, ctypes, re, base64, time
+import os, sys, hashlib, pickle, json, ctypes, re, base64, time, thread
 from collections import deque
 
 index = {}
@@ -53,23 +53,35 @@ def startIndexing(root):
 			last10 = time.time()
 			itempersec = 10 / timeto10
 			
-			# Saves the index every 1000 items
-			if n % 1000 == 0:
-				title("Saving...")
-				idxf = open("index.pickle", "wb")
-				pickle.dump(index, idxf)
-				idxf.close()
-				
-				# Do periodic backups every 5000 items
-				# Just in case the program crashes when saving
-				if n % 5000 == 0:
-					idxf = open("index.{0}.pickle".format(time.time()), "wb")
-					pickle.dump(index, idxf)
-					idxf.close()
+			# Saves the index every 5000 items
+			if n % 5000 == 0:
+				try:
+					thread.start_new_thread(dumpIndexToFile)
+				except:
+					dumpIndexToFile()
 	
 	tIdxEnd = time.time()
 	tIdx = tIdxEnd - tIdxStart
 	print "Finished indexing in {0} ({1:.2f} files/sec avg.)".format(sec2time(tIdx), n / tIdx)
+
+def dumpIndexToFile():
+	"""
+	Safely dumps the index to a file
+	"""
+	global index
+	
+	try:
+		# Save to temp file
+		idxf = open("index.pickle~", "wb")
+		pickle.dump(index, idxf)
+		idxf.close()
+		
+		# Replace original file with the temp file
+		abspath = os.path.abspath("index.pickle~")
+		os.remove(abspath[:1])
+		os.rename(abspath, abspath[:1])
+	except:
+		print "Unable to save file!"
 
 def loadIndex():
 	"""
@@ -137,6 +149,20 @@ def displayItem(k):
 	global index
 	print "    {0}\n    MD5: {1} | Size: {2} bytes\n".format(k, base64.b16encode(index[k][1]), index[k][0])
 
+def displayDupeFinder():
+	"""
+	Duplicate file UI wrapper
+	"""
+	pass
+
+def doFindDuplicates():
+	"""
+	Finds duplicates by comparing hashes
+	"""
+	global index
+	loadIndex()
+	
+
 def displaySearch():
 	"""
 	Search UI wrapper
@@ -182,7 +208,7 @@ def doSearch(query):
 					found += 1
 					displayItem(key)
 	else:
-		bin = base64.b16decode(query.strip())
+		bin = base64.b16decode(query.upper().strip())
 		print "Searching by MD5: {0}\n\n".format(query)
 		for key in index:
 			n += 1
