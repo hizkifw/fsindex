@@ -24,6 +24,7 @@ def startIndexing(root):
 	
 	stack = deque(os.listdir(root))
 	n = 0
+	mem = getMem()
 	last10 = time.time()
 	itempersec = 0
 	tIdxStart = time.time()
@@ -35,7 +36,7 @@ def startIndexing(root):
 		
 		# Show some status messages
 		print "[{0} scanned, {1} left] {2}".format(n, len(stack), root + now)
-		title("Indexing... {0} scanned, {1} left, at {2} files/sec. Mem: {3:.1f}MB".format(n, len(stack), int(itempersec), sys.getsizeof(index)/1048576))
+		title("Indexing... {0} scanned, {1} left, at {2} files/sec. Mem: {3:.1f}MB".format(n, len(stack), int(itempersec), mem))
 		
 		if os.path.isfile(root + now):
 			# If item is a file, add to index
@@ -54,10 +55,14 @@ def startIndexing(root):
 			last10 = time.time()
 			itempersec = 10 / timeto10
 			
-			# Saves the index every 5000 items
-			if n % 5000 == 0 and not saveThread.isAlive():
-				saveThread = threading.Thread(target=dumpIndexToFile)
-				saveThread.start()
+			if n % 100 == 0:
+				# Get memory usage every 100 items
+				mem = getMem()
+			
+				if n % 5000 == 0 and not saveThread.isAlive():
+					# Saves the index every 5000 items
+					saveThread = threading.Thread(target=dumpIndexToFile)
+					saveThread.start()
 	
 	tIdxEnd = time.time()
 	tIdx = tIdxEnd - tIdxStart
@@ -259,6 +264,16 @@ def sec2time(secs):
 	m = int(secs // 60)
 	h = int(secs // 3600)
 	return "{0:02d}h {1:02d}m {2:.2f}s".format(h, m, s)
+
+def getMem():
+	"""
+	Gets memory usage using tasklist
+	"""
+	pid = os.getpid()
+	exe = 'tasklist /fi "pid eq {0}" /fo csv /nh'.format(pid)
+	csv = os.popen(exe).read()
+	mem = re.match(r"(\"(.*)\"\,?){5}", csv).group(2)
+	return mem
 
 if __name__ == "__main__":
 	if len(sys.argv) == 1:
