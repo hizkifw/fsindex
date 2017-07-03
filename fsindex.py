@@ -60,6 +60,11 @@ def startIndexing(root):
 				except:
 					dumpIndexToFile()
 	
+	# Save at the end of indexing
+	try:
+		thread.start_new_thread(dumpIndexToFile)
+	except:
+		dumpIndexToFile()
 	tIdxEnd = time.time()
 	tIdx = tIdxEnd - tIdxStart
 	print "Finished indexing in {0} ({1:.2f} files/sec avg.)".format(sec2time(tIdx), n / tIdx)
@@ -78,10 +83,12 @@ def dumpIndexToFile():
 		
 		# Replace original file with the temp file
 		abspath = os.path.abspath("index.pickle~")
-		os.remove(abspath[:1])
-		os.rename(abspath, abspath[:1])
-	except:
+		os.remove(abspath[:-1])
+		os.rename(abspath, abspath[:-1])
+	except Exception, e:
 		print "Unable to save file!"
+		print str(e)
+		raw_input("Enter to continue")
 
 def loadIndex():
 	"""
@@ -109,8 +116,9 @@ def indexFile(path):
 		size = os.path.getsize(path)
 		modified = os.path.getmtime(path)
 		
-		if path in index and index[path][0] == size and 2 in index[path] and index[path][2] == modified:
+		if path in index and index[path][0] == size and len(index[path]) > 2 and index[path][2] == modified:
 			# File is the same, don't hash
+			print "Skipping"
 			f.close()
 			return
 		
