@@ -37,6 +37,7 @@ def startIndexing(root):
 		# Show some status messages
 		print "[{0} scanned, {1} left] {2}".format(n, len(stack), root + now)
 		title("Indexing... {0} scanned, {1} left, at {2} files/sec. Mem: {3}MB".format(n, len(stack), int(itempersec), mem))
+
 		
 		if os.path.isfile(root + now):
 			# If item is a file, add to index
