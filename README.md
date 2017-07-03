@@ -10,4 +10,5 @@ Indexed items:
 - Date modified
 
 Some test results:
-- Searched through 149736 filenames in 5.83 seconds
+- ~~Searched through 149736 filenames in 5.83 seconds~~
+- Did some optimizations, can now go through 1 million items in 0.8 secs

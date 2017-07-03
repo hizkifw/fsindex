@@ -68,7 +68,8 @@ def startIndexing(root):
 					idxf.close()
 	
 	tIdxEnd = time.time()
-	print "Finished indexing in {0}".format(sec2time(tIdxEnd - tIdxStart))
+	tIdx = tIdxEnd - tIdxStart
+	print "Finished indexing in {0} ({1:.2f} files/sec avg.)".format(sec2time(tIdx), n / tIdx)
 
 def loadIndex():
 	"""
