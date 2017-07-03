@@ -35,7 +35,7 @@ def startIndexing(root):
 		
 		# Show some status messages
 		print "[{0} scanned, {1} left] {2}".format(n, len(stack), root + now)
-		title("Indexing... {0} scanned, {1} left, at {2} files/sec".format(n, len(stack), int(itempersec)))
+		title("Indexing... {0} scanned, {1} left, at {2} files/sec. Mem: {3:.1f}MB".format(n, len(stack), int(itempersec), sys.getsizeof(index)/1048576))
 		
 		if os.path.isfile(root + now):
 			# If item is a file, add to index
@@ -56,6 +56,7 @@ def startIndexing(root):
 			
 			# Saves the index every 5000 items
 			if n % 5000 == 0 and not saveThread.isAlive():
+				saveThread = threading.Thread(target=dumpIndexToFile)
 				saveThread.start()
 	
 	tIdxEnd = time.time()
@@ -76,7 +77,7 @@ def dumpIndexToFile():
 	try:
 		# Save to temp file
 		idxf = open("index.pickle~", "wb")
-		pickle.dump(index, idxf)
+		pickle.dump(index.copy(), idxf)
 		idxf.close()
 		
 		# Replace original file with the temp file
@@ -86,7 +87,7 @@ def dumpIndexToFile():
 	except Exception, e:
 		print "Unable to save file!"
 		print str(e)
-		raw_input("Enter to continue")
+		errSave = e
 
 def loadIndex():
 	"""
