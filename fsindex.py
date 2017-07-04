@@ -70,6 +70,11 @@ def startIndexing(root):
 	tIdx = tIdxEnd - tIdxStart
 	print "Finished indexing in {0} ({1:.2f} files/sec avg.)".format(sec2time(tIdx), n / tIdx)
 	
+	if saveThread.isAlive():
+		print "Waiting for previous save to complete"
+		while saveThread.isAlive():
+			time.sleep(1)
+		
 	# Blocking save at the end of indexing
 	print "Saving..."
 	dumpIndexToFile()
@@ -266,7 +271,7 @@ def sec2time(secs):
 	Converts seconds to hours, minutes, and seconds
 	"""
 	s = secs % 60
-	m = int(secs // 60)
+	m = int(secs // 60 % 60)
 	h = int(secs // 3600)
 	return "{0:02d}h {1:02d}m {2:.2f}s".format(h, m, s)
 
