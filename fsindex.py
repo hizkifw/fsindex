@@ -10,12 +10,13 @@ from collections import deque
 
 index = {}
 mem = ""
+nThreads = 16
 
 def startIndexing(root):
 	"""
 	Indexes all files within `root`
 	"""
-	global index, mem
+	global index, mem, nThreads
 	
 	# Normalize file path
 	root = re.sub(r"\\+", r"\\", root + "\\")
@@ -29,32 +30,35 @@ def startIndexing(root):
 	itempersec = 0
 	tIdxStart = time.time()
 	saveThread = threading.Thread(target=dumpIndexToFile)
+	indexThreads = [None]*nThreads
+	exploreThread = threading.Thread(target=doExplore)
 	while len(stack) > 0:
-		# Get next target from stack
-		now = stack.pop()
-		n += 1
-		
 		# Show some status messages
-		print "[{0} scanned, {1} left] {2}".format(n, len(stack), root + now)
 		title("Indexing... {0} scanned, {1} left, at {2} files/sec. Mem: {3}".format(n, len(stack), int(itempersec), mem))
 
-		
-		if os.path.isfile(root + now):
-			# If item is a file, add to index
-			indexFile(root + now)
-		else:
-			try:
-				# If item is a directory, try to list contents and add to stack
-				dirs = map(lambda dir: now + "\\" + dir, os.listdir(root + now))
-				stack.extend(dirs)
-			except:
-				pass
+		for i in range(nThreads):
+			# Look for completed threads
+			if indexThreads[i] is None or not indexThreads[i].isAlive():
+				# Get next target from stack
+				now = stack.pop()
+				n += 1
+				
+				# Check target type
+				if os.path.isfile(root + now):
+					# Start thread if file
+					indexThreads[i] = threading.Thread(target=indexFile, args=(root + now,))
+					indexThreads[i].start()
+					print "[{3:02d}][{0} scanned, {1} left] {2}".format(n, len(stack), root + now, i)
+				else:
+					# Add contents to stack if directory
+					print "Exploring directory {0}".format(root + now)
+					doExplore(root, now, stack)
 		
 		if n % 10 == 0:
 			# Calculate scan speed every 10 items
 			timeto10 = time.time() - last10
 			last10 = time.time()
-			itempersec = 10 / timeto10
+			itempersec = 10 / timeto10 if timeto10 > 0 else 0
 			
 			if n % 100 == 0:
 				# Get memory usage every 100 items
@@ -70,6 +74,11 @@ def startIndexing(root):
 	tIdx = tIdxEnd - tIdxStart
 	print "Finished indexing in {0} ({1:.2f} files/sec avg.)".format(sec2time(tIdx), n / tIdx)
 	
+	print "Waiting for all threads to finish..."
+	for i in range(nThreads):
+		while indexThreads[i].isAlive():
+			time.sleep(1)
+	
 	if saveThread.isAlive():
 		print "Waiting for previous save to complete"
 		while saveThread.isAlive():
@@ -79,6 +88,14 @@ def startIndexing(root):
 	print "Saving..."
 	dumpIndexToFile()
 	print "Index file saved!"
+
+def doExplore(root, now, stack):
+	# If item is a directory, try to list contents and add to stack
+	try:
+		dirs = map(lambda dir: now + "\\" + dir, os.listdir(root + now))
+		stack.extend(dirs)
+	except:
+		pass
 
 def dumpIndexToFile():
 	"""
@@ -132,7 +149,7 @@ def indexFile(path):
 		
 		if path in index and index[path][0] == size and len(index[path]) > 2 and index[path][2] == modified:
 			# File is the same, don't hash
-			print "Skipping"
+			#print "Skipping"
 			f.close()
 			return
 		
