@@ -207,19 +207,45 @@ def displayItem(k):
 	global index
 	print "    {0}\n    MD5: {1} | Size: {2} bytes\n".format(k, base64.b16encode(index[k][1]), index[k][0])
 
-def displayDupeFinder():
-	"""
-	Duplicate file UI wrapper
-	"""
-	pass
-
 def doFindDuplicates():
 	"""
 	Finds duplicates by comparing hashes
 	"""
 	global index
 	loadIndex()
+	hashes = {}
+	dupes = []
+	n = 0
+	t = len(index)
 	
+	print "Searching for hash duplicates..."
+	print "Press Ctrl-C anytime to stop"
+	try:
+		for path in index:
+			n += 1
+			if index[path][1] in hashes:
+				hashes[index[path][1]].append(path)
+				if not index[path][1] in dupes:
+					dupes.append(index[path][1])
+			else:
+				hashes[index[path][1]] = [path]
+			
+			if n % 1000 == 0:
+				title("Finding duplicates... {0}/{1} ({2:.2f}%), found {3}".format(n, t, 100*n/t, len(dupes)))
+	except KeyboardInterrupt:
+		print "Stopped by KeyboardInterrupt"
+	
+	# Free up some RAM
+	del index
+	
+	if len(dupes) > 0:
+		for hash in dupes:
+			print base64.b16encode(hash)
+			for path in hashes[hash]:
+				print "    " + path
+			print ""
+	else:
+		print "No duplicates found"
 
 def displaySearch():
 	"""
@@ -286,6 +312,7 @@ def displayMenu():
 	print ""
 	print "[ i ] Start indexing"
 	print "[ s ] Search"
+	print "[ d ] Find duplicate files"
 	print "[ x ] Exit"
 	print ""
 	choice = raw_input("> ")
@@ -295,6 +322,8 @@ def displayMenu():
 		startIndexing(raw_input("> "))
 	elif choice == "s":
 		displaySearch()
+	elif choice == "d":
+		doFindDuplicates()
 
 def title(title):
 	"""
