@@ -16,3 +16,4 @@ Features:
 - Multithreaded file indexing
 - Regex search
 - Duplicate file finder
+- Export data as CSV

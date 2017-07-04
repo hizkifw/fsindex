@@ -5,7 +5,7 @@ Currently only works on Windows and Python 2.7
 (c) 2017 Hizkia Felix
 """
 
-import os, sys, hashlib, pickle, json, ctypes, re, base64, time, threading
+import os, sys, hashlib, pickle, json, ctypes, re, base64, time, threading, csv
 from collections import deque
 
 index = {}
@@ -140,6 +140,27 @@ def dumpIndexToFile():
 		errSave = e
 	isSaving = False
 
+def dumpIndexToCsv(out):
+	"""
+	Exports the index as a CSV file
+	"""
+	global index
+	
+	print "Exporting as CSV"
+	with open(out, "wb") as f:
+		c = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
+		c.writerow(["path", "size", "hash", "modified"])
+		n = 0
+		t = len(index)
+		for path in index:
+			n += 1
+			now = index[path]
+			c.writerow([path, now[0], base64.b16encode(now[1]), now[2] if 2 in now else -1])
+			
+			if n % 1000 == 0:
+				title("Exporting... {0}/{1} ({2}%)".format(n, t, 100*n/t))
+	print "Done!"
+
 def loadIndex():
 	"""
 	Loads entire index file into memory
@@ -231,7 +252,7 @@ def doFindDuplicates():
 				hashes[index[path][1]] = [path]
 			
 			if n % 1000 == 0:
-				title("Finding duplicates... {0}/{1} ({2:.2f}%), found {3}".format(n, t, 100*n/t, len(dupes)))
+				title("Finding duplicates... {0}/{1} ({2}%), found {3}".format(n, t, 100*n/t, len(dupes)))
 	except KeyboardInterrupt:
 		print "Stopped by KeyboardInterrupt"
 	
@@ -313,6 +334,7 @@ def displayMenu():
 	print "[ i ] Start indexing"
 	print "[ s ] Search"
 	print "[ d ] Find duplicate files"
+	print "[ e ] Export data as CSV"
 	print "[ x ] Exit"
 	print ""
 	choice = raw_input("> ")
@@ -324,6 +346,10 @@ def displayMenu():
 		displaySearch()
 	elif choice == "d":
 		doFindDuplicates()
+	elif choice == "e":
+		loadIndex()
+		print "Output file?"
+		dumpIndexToCsv(raw_input("> "))
 
 def title(title):
 	"""
