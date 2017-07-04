@@ -22,6 +22,7 @@ def startIndexing(root):
 	# Normalize file path
 	root = re.sub(r"\\+", r"\\", root + "\\")
 	print "Starting index from " + root
+	print "Press Ctrl-C anytime to save and quit"
 	
 	loadIndex()
 	
@@ -73,6 +74,10 @@ def startIndexing(root):
 					if time.time() - lastSave > 600: # and not saveThread.isAlive():
 						# Saves the index every 10 minutes
 						# Background saving is too buggy
+						print "Waiting for all threads to finish..."
+						for i in range(nThreads):
+							while indexThreads[i].isAlive():
+								time.sleep(1)
 						print "Saving..."
 						lastSave = time.time()
 						dumpIndexToFile()
