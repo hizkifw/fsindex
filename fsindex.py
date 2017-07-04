@@ -44,7 +44,7 @@ def startIndexing(root):
 
 			for i in range(nThreads):
 				# Look for completed threads
-				if indexThreads[i] is None or not indexThreads[i].isAlive():
+				if indexThreads[i] is None or not indexThreads[i].isAlive() and len(stack) > 0:
 					# Get next target from stack
 					now = stack.pop()
 					n += 1
@@ -84,6 +84,7 @@ def startIndexing(root):
 						# saveThread = threading.Thread(target=dumpIndexToFile)
 						# saveThread.start()
 	except KeyboardInterrupt:
+		# Ctrl-C
 		print "Stopped by KeyboardInterrupt"
 	
 	tIdxEnd = time.time()
