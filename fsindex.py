@@ -89,7 +89,10 @@ def dumpIndexToFile():
 		
 		# Replace original file with the temp file
 		abspath = os.path.abspath("index.pickle~")
-		os.remove(abspath[:-1])
+		try:
+			os.remove(abspath[:-1])
+		except:
+			pass
 		os.rename(abspath, abspath[:-1])
 	except Exception, e:
 		print "Unable to save file!"
