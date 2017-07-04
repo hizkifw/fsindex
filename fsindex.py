@@ -11,12 +11,13 @@ from collections import deque
 index = {}
 mem = ""
 nThreads = 16
+isSaving = False
 
 def startIndexing(root):
 	"""
 	Indexes all files within `root`
 	"""
-	global index, mem, nThreads
+	global index, mem, nThreads, isSaving
 	
 	# Normalize file path
 	root = re.sub(r"\\+", r"\\", root + "\\")
@@ -32,43 +33,53 @@ def startIndexing(root):
 	saveThread = threading.Thread(target=dumpIndexToFile)
 	indexThreads = [None]*nThreads
 	exploreThread = threading.Thread(target=doExplore)
-	while len(stack) > 0:
-		# Show some status messages
-		title("Indexing... {0} scanned, {1} left, at {2} files/sec. Mem: {3}".format(n, len(stack), int(itempersec), mem))
+	lastSave = time.time()
+	try:
+		while len(stack) > 0:
+			# Show some status messages
+			title("Indexing... {0} scanned, {1} left, at {2} files/sec. Mem: {3}, Elapsed: {4} {5}".format(
+				n, len(stack), int(itempersec), mem, sec2time(time.time() - tIdxStart), "[Saving]" if isSaving else ""
+			))
 
-		for i in range(nThreads):
-			# Look for completed threads
-			if indexThreads[i] is None or not indexThreads[i].isAlive():
-				# Get next target from stack
-				now = stack.pop()
-				n += 1
+			for i in range(nThreads):
+				# Look for completed threads
+				if indexThreads[i] is None or not indexThreads[i].isAlive():
+					# Get next target from stack
+					now = stack.pop()
+					n += 1
+					
+					# Check target type
+					if os.path.isfile(root + now):
+						# Start thread if file
+						indexThreads[i] = threading.Thread(target=indexFile, args=(root + now,))
+						indexThreads[i].start()
+						print "[{3:02d}][{0} scanned, {1} left] {2}".format(n, len(stack), root + now, i)
+					else:
+						# Add contents to stack if directory
+						print "Exploring directory {0}".format(root + now)
+						doExplore(root, now, stack)
+			
+			if n % 10 == 0:
+				# Calculate scan speed every 10 items
+				timeto10 = time.time() - last10
+				last10 = time.time()
+				itempersec = 10 / timeto10 if timeto10 > 0 else 0
 				
-				# Check target type
-				if os.path.isfile(root + now):
-					# Start thread if file
-					indexThreads[i] = threading.Thread(target=indexFile, args=(root + now,))
-					indexThreads[i].start()
-					print "[{3:02d}][{0} scanned, {1} left] {2}".format(n, len(stack), root + now, i)
-				else:
-					# Add contents to stack if directory
-					print "Exploring directory {0}".format(root + now)
-					doExplore(root, now, stack)
-		
-		if n % 10 == 0:
-			# Calculate scan speed every 10 items
-			timeto10 = time.time() - last10
-			last10 = time.time()
-			itempersec = 10 / timeto10 if timeto10 > 0 else 0
-			
-			if n % 100 == 0:
-				# Get memory usage every 100 items
-				infoThread = threading.Thread(target=getMem)
-				infoThread.start()
-			
-				if n % 5000 == 0 and not saveThread.isAlive():
-					# Saves the index every 5000 items
-					saveThread = threading.Thread(target=dumpIndexToFile)
-					saveThread.start()
+				if n % 100 == 0:
+					# Get memory usage every 100 items
+					infoThread = threading.Thread(target=getMem)
+					infoThread.start()
+				
+					if time.time() - lastSave > 600: # and not saveThread.isAlive():
+						# Saves the index every 10 minutes
+						# Background saving is too buggy
+						print "Saving..."
+						lastSave = time.time()
+						dumpIndexToFile()
+						# saveThread = threading.Thread(target=dumpIndexToFile)
+						# saveThread.start()
+	except KeyboardInterrupt:
+		print "Stopped by KeyboardInterrupt"
 	
 	tIdxEnd = time.time()
 	tIdx = tIdxEnd - tIdxStart
@@ -101,12 +112,13 @@ def dumpIndexToFile():
 	"""
 	Safely dumps the index to a file
 	"""
-	global index
+	global index, isSaving
 	
+	isSaving = True
 	try:
 		# Save to temp file
 		idxf = open("index.pickle~", "wb")
-		pickle.dump(index.copy(), idxf)
+		pickle.dump(index, idxf)
 		idxf.close()
 		
 		# Replace original file with the temp file
@@ -120,6 +132,7 @@ def dumpIndexToFile():
 		print "Unable to save file!"
 		print str(e)
 		errSave = e
+	isSaving = False
 
 def loadIndex():
 	"""
